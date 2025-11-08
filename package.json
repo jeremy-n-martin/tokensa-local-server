@@ -1,0 +1,14 @@
+{
+  "dependencies": {
+    "@ai-sdk/openai": "^2.0.64",
+    "fastify": "^5.6.1",
+    "fastify-cors": "^6.0.3",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}
