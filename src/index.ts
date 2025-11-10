@@ -50,27 +50,46 @@ app.get("/api/health", async (_, reply) => {
   reply.send({ ok, model: "qwen2.5:1.5b-instruct", ready: ok });
 });
 
-const BodySchema = z.object({
-  age: z.number().min(2).max(120),
+const TAGS_ENUM = [
+  "dyslexie",
+  "dysorthographie",
+  "dyspraxie",
+  "dysphasie",
+  "begaiement",
+  "TDAH",
+  "dyscalculie",
+  "articulation",
+  "comprehension",
+  "phonologie"
+] as const;
+
+const BodySchema = z.preprocess((raw) => {
+  const body = (raw ?? {}) as Record<string, unknown>;
+  const ageValue = body.age;
+  const age =
+    typeof ageValue === "number"
+      ? ageValue
+      : typeof ageValue === "string"
+      ? Number(ageValue)
+      : NaN;
+
+  const tagsValue = (body as any).tags;
+  const tagsArray: unknown[] = Array.isArray(tagsValue)
+    ? tagsValue
+    : tagsValue != null
+    ? [tagsValue]
+    : [];
+
+  return {
+    age,
+    niveau: typeof body.niveau === "string" ? body.niveau : undefined,
+    tags: tagsArray
+  };
+}, z.object({
+  age: z.coerce.number().min(2).max(120),
   niveau: z.string().optional(),
-  tags: z
-    .array(
-      z.enum([
-        "dyslexie",
-        "dysorthographie",
-        "dyspraxie",
-        "dysphasie",
-        "begaiement",
-        "TDAH",
-        "dyscalculie",
-        "articulation",
-        "comprehension",
-        "phonologie"
-      ])
-    )
-    .min(1)
-    .max(6)
-});
+  tags: z.array(z.enum(TAGS_ENUM)).min(1).max(6)
+}));
 
 app.post("/api/generate", async (req, reply) => {
   // Ajout manuel des en-têtes CORS car on écrit sur reply.raw (stream)
@@ -85,7 +104,8 @@ app.post("/api/generate", async (req, reply) => {
   let parsed;
   try {
     parsed = BodySchema.parse(req.body);
-  } catch {
+  } catch (err) {
+    req.log.warn({ msg: "Invalid request body for /api/generate", body: req.body, err });
     reply.status(400).send("Bad request");
     return;
   }
