@@ -4,25 +4,45 @@ import { z } from "zod";
 import { streamGenerate, pingModel } from "./llm.js";
 
 const ORIGIN = "https://tokensa.com";
+const ALLOWED_ORIGINS = new Set<string>([
+  "https://tokensa.com",
+  "https://www.tokensa.com"
+]);
 const PORT = 3327;
 
 const app = Fastify({ logger: true });
 
 await app.register(cors, {
-  origin: ORIGIN,
+  origin: (origin, cb) => {
+    // Autoriser requêtes sans Origin (ex: curl, extensions) et origins connus
+    if (!origin || ALLOWED_ORIGINS.has(origin)) return cb(null, true);
+    return cb(null, false);
+  },
   methods: ["POST", "GET", "OPTIONS"],
   allowedHeaders: ["content-type", "x-tokensa"],
   hook: "preHandler"
 });
 
-app.options("/api/generate", async (_, reply) => {
+app.options("/api/generate", async (req, reply) => {
   // Chrome 142+ : PNA/LNA header requis
+  const origin = req.headers.origin;
+  const allowOrigin =
+    origin && ALLOWED_ORIGINS.has(origin) ? origin : ORIGIN;
+  // Refléter les headers demandés par la préflight si fournis
+  const acrh = req.headers["access-control-request-headers"] as
+    | string
+    | undefined;
   reply
     .header("Access-Control-Allow-Private-Network", "true")
     // CORS explicites pour la préflight
-    .header("Access-Control-Allow-Origin", ORIGIN)
+    .header("Access-Control-Allow-Origin", allowOrigin)
+    .header("Access-Control-Allow-Credentials", "true")
+    .header("Vary", "Origin")
     .header("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-    .header("Access-Control-Allow-Headers", "content-type, x-tokensa")
+    .header(
+      "Access-Control-Allow-Headers",
+      acrh ?? "content-type, x-tokensa"
+    )
     .status(204)
     .send();
 });
@@ -56,7 +76,12 @@ const BodySchema = z.object({
 
 app.post("/api/generate", async (req, reply) => {
   // Ajout manuel des en-têtes CORS car on écrit sur reply.raw (stream)
-  reply.header("Access-Control-Allow-Origin", ORIGIN);
+  const origin = req.headers.origin;
+  const allowOrigin =
+    origin && ALLOWED_ORIGINS.has(origin) ? origin : ORIGIN;
+  reply.header("Access-Control-Allow-Origin", allowOrigin);
+  reply.header("Access-Control-Allow-Credentials", "true");
+  reply.header("Vary", "Origin");
   reply.header("Content-Type", "text/plain; charset=utf-8");
   reply.header("Transfer-Encoding", "chunked");
   reply.header("X-Accel-Buffering", "no");
