@@ -19,7 +19,7 @@ export async function* streamGenerate(input: Input) {
   const user = buildPrompt(input);
 
   const stream = await ollama.chat({
-    model: "qwen2.5:1.5b-instruct",
+    model: "qwen3:4b",
     stream: true,
     messages: [
       { role: "system", content: system },
