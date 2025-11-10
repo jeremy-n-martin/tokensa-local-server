@@ -36,6 +36,7 @@ app.options("/api/generate", async (req, reply) => {
     .header("Access-Control-Allow-Private-Network", "true")
     // CORS explicites pour la préflight
     .header("Access-Control-Allow-Origin", allowOrigin)
+    .header("Vary", "Origin")
     .header("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
     .header(
       "Access-Control-Allow-Headers",
@@ -45,7 +46,12 @@ app.options("/api/generate", async (req, reply) => {
     .send();
 });
 
-app.get("/api/health", async (_, reply) => {
+app.get("/api/health", async (req, reply) => {
+  const origin = req.headers.origin;
+  const allowOrigin =
+    origin && ALLOWED_ORIGINS.has(origin) ? origin : ORIGIN;
+  reply.header("Access-Control-Allow-Origin", allowOrigin);
+  reply.header("Vary", "Origin");
   const ok = await pingModel();
   reply.send({ ok, model: "qwen2.5:1.5b-instruct", ready: ok });
 });
@@ -97,6 +103,7 @@ app.post("/api/generate", async (req, reply) => {
   const allowOrigin =
     origin && ALLOWED_ORIGINS.has(origin) ? origin : ORIGIN;
   reply.header("Access-Control-Allow-Origin", allowOrigin);
+  reply.header("Vary", "Origin");
   reply.header("Content-Type", "text/plain; charset=utf-8");
   reply.header("Transfer-Encoding", "chunked");
   reply.header("X-Accel-Buffering", "no");
