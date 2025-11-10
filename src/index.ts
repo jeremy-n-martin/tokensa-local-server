@@ -17,7 +17,14 @@ await app.register(cors, {
 
 app.options("/api/generate", async (_, reply) => {
   // Chrome 142+ : PNA/LNA header requis
-  reply.header("Access-Control-Allow-Private-Network", "true").send();
+  reply
+    .header("Access-Control-Allow-Private-Network", "true")
+    // CORS explicites pour la préflight
+    .header("Access-Control-Allow-Origin", ORIGIN)
+    .header("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
+    .header("Access-Control-Allow-Headers", "content-type, x-tokensa")
+    .status(204)
+    .send();
 });
 
 app.get("/api/health", async (_, reply) => {
@@ -48,6 +55,8 @@ const BodySchema = z.object({
 });
 
 app.post("/api/generate", async (req, reply) => {
+  // Ajout manuel des en-têtes CORS car on écrit sur reply.raw (stream)
+  reply.header("Access-Control-Allow-Origin", ORIGIN);
   reply.header("Content-Type", "text/plain; charset=utf-8");
   reply.header("Transfer-Encoding", "chunked");
   reply.header("X-Accel-Buffering", "no");
