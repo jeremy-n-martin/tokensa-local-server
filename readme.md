@@ -1,6 +1,6 @@
 # Tokensa Local Server
 
-Serveur d'inférence local pour [tokensa.com](https://tokensa.com).
+Serveur d'inférence local pour [tokensa.com](https://tokensa.com)
 
 ## Prérequis
 

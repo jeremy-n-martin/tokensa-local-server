@@ -6,7 +6,10 @@ import { streamGenerate, pingModel } from "./llm.js";
 const ORIGIN = "https://tokensa.com";
 const ALLOWED_ORIGINS = new Set<string>([
   "https://tokensa.com",
-  "https://www.tokensa.com"
+  "https://www.tokensa.com",
+  // Dev local (Live Server)
+  "http://127.0.0.1:5500",
+  "http://localhost:5500"
 ]);
 const PORT = 3327;
 
