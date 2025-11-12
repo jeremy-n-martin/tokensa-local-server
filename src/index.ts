@@ -1,7 +1,7 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { z } from "zod";
-import { streamGenerate, pingModel } from "./llm.js";
+import { streamGenerate, pingModel, generateOnce } from "./llm.js";
 
 const ORIGIN = "https://tokensa.com";
 const BASE_DOMAIN = "tokensa.com";
@@ -138,14 +138,32 @@ app.post("/api/generate", async (req, reply) => {
     return;
   }
 
-  // Configuration CORS + PNA avant tout envoi
+  // Sélection du mode : JSON (par défaut) ou streaming si ?stream=1|true
+  const q: any = (req as any).query ?? {};
+  const streamParam = typeof q.stream === "string" ? q.stream.toLowerCase() : q.stream;
+  const shouldStream = streamParam === "1" || streamParam === "true";
+
+  if (!shouldStream) {
+    // Réponse JSON classique (pas de hijack -> onSend applique PNA+CORS)
+    try {
+      const text = await generateOnce(parsed);
+      reply
+        .header("Content-Type", "application/json; charset=utf-8")
+        .send({ text, model: "qwen3:4b" });
+    } catch (err) {
+      app.log.error(err, "Erreur génération (JSON)");
+      reply.status(500).send({ error: "Generation failed" });
+    }
+    return;
+  }
+
+  // Mode streaming texte brut
   const origin = req.headers.origin;
   const allowOrigin = resolveAllowOrigin(origin);
-  
+
   reply.hijack();
   const res = reply.raw;
-  
-  // En-têtes CORS/PNA obligatoires
+
   res.setHeader("Access-Control-Allow-Origin", allowOrigin);
   res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader("Access-Control-Allow-Private-Network", "true");
@@ -153,8 +171,7 @@ app.post("/api/generate", async (req, reply) => {
   res.setHeader("Content-Type", "text/plain; charset=utf-8");
   res.setHeader("Transfer-Encoding", "chunked");
   res.setHeader("X-Accel-Buffering", "no");
-  
-  // Envoyer les en-têtes immédiatement
+
   res.writeHead(200);
 
   try {
