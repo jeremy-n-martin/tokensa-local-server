@@ -51,7 +51,8 @@ const isAllowedOrigin = (origin?: string | null) => {
 // - Sinon, on tombe sur l'origine "officielle" (ORIGIN).
 const resolveAllowOrigin = (origin?: string | null) =>
   origin && isAllowedOrigin(origin) ? origin : ORIGIN;
-const PORT = 3327;
+const PORT = Number(process.env.PORT ?? 3327);
+const HOST = process.env.HOST ?? "0.0.0.0";
 
 // Création de l'application Fastify.
 // Le logger activé (logger: true) affiche des informations utiles en console.
@@ -248,6 +249,10 @@ app.post("/api/generate", async (req, reply) => {
   }
 });
 
-app.listen({ host: "127.0.0.1", port: PORT }).then(() => {
-  app.log.info(`Tokensa local server → http://127.0.0.1:${PORT}`);
+app.listen({ host: HOST, port: PORT }).then(() => {
+  const displayHost = HOST === "0.0.0.0" ? "0.0.0.0 (toutes interfaces)" : HOST;
+  app.log.info(
+    `Tokensa local server → http://${displayHost}:${PORT} (configurable via HOST/PORT)`
+  );
+  
 });
