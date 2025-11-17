@@ -24,8 +24,8 @@ type Input = { age: number; niveau?: string; tags: string[] };
 
 // Choix du modèle:
 // - On lit la variable d'environnement OLLAMA_MODEL si disponible
-// - Sinon, on utilise une valeur par défaut "qwen3:1.7b"
-const MODEL = process.env.OLLAMA_MODEL ?? "qwen3:1.7b";
+// - Sinon, on utilise une valeur par défaut "qwen3:4b"
+const MODEL = process.env.OLLAMA_MODEL ?? "qwen3:4b";
 
 export async function generateOnce(input: Input): Promise<string> {
   try {
