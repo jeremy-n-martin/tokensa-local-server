@@ -1,7 +1,7 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { z } from "zod";
-import { streamGenerate, pingModel, generateOnce } from "./llm.js";
+import { pingModel, generateOnce } from "./llm.js";
 
 // ------------------------------------------------------------
 // Fichier: index.ts
@@ -174,10 +174,7 @@ const BodySchema = z.object({
 });
 
 // Route principale de génération: /api/generate
-// Deux modes de réponse sont proposés:
-// 1) JSON (par défaut): renvoie le texte complet une fois généré
-// 2) Streaming (si ?stream=1|true): renvoie le texte progressivement (chunk par chunk)
-//    utile pour afficher la génération en temps réel côté client.
+// Réponse JSON : renvoie le texte complet une fois généré.
 app.post("/api/generate", async (req, reply) => {
   // Validation du body en premier
   let parsed;
@@ -188,64 +185,14 @@ app.post("/api/generate", async (req, reply) => {
     return;
   }
 
-  // Sélection du mode : JSON (par défaut) ou streaming si ?stream=1|true
-  const q: any = (req as any).query ?? {};
-  const streamParam = typeof q.stream === "string" ? q.stream.toLowerCase() : q.stream;
-  const shouldStream = streamParam === "1" || streamParam === "true";
-
-  if (!shouldStream) {
-    // Réponse JSON classique (pas de hijack -> onSend applique PNA+CORS)
-    // Étapes:
-    // 1) Appel au générateur non-stream (generateOnce)
-    // 2) Renvoi du JSON { text, model }
-    try {
-      const text = await generateOnce(parsed);
-      reply
-        .header("Content-Type", "application/json; charset=utf-8")
-        .send({ text, model: "qwen3:1.7b" });
-    } catch (err) {
-      app.log.error(err, "Erreur génération (JSON)");
-      reply.status(500).send({ error: "Generation failed" });
-    }
-    return;
-  }
-
-  // Mode streaming texte brut
-  // Différences notables:
-  // - On "hijack" la réponse Fastify pour écrire directement sur le socket HTTP
-  //   (car la réponse arrive en plusieurs morceaux au fil du temps).
-  // - On fixe les en-têtes CORS/PNA nous-mêmes car on sort du flux standard.
-  const origin = req.headers.origin;
-  const allowOrigin = resolveAllowOrigin(origin);
-
-  reply.hijack();
-  const res = reply.raw;
-
-  // En-têtes pour autoriser le streaming cross-origin et désactiver certains buffers.
-  res.setHeader("Access-Control-Allow-Origin", allowOrigin);
-  res.setHeader("Access-Control-Allow-Credentials", "true");
-  res.setHeader("Access-Control-Allow-Private-Network", "true");
-  res.setHeader("Vary", "Origin");
-  res.setHeader("Content-Type", "text/plain; charset=utf-8");
-  res.setHeader("Transfer-Encoding", "chunked");
-  res.setHeader("X-Accel-Buffering", "no");
-
-  res.writeHead(200);
-
   try {
-    // On obtient un itérable asynchrone qui émet des morceaux de texte.
-    const iter = streamGenerate(parsed);
-    for await (const chunk of iter) {
-      // Chaque 'chunk' est une portion de texte généré par le modèle.
-      // Le client peut l'afficher immédiatement pour un effet "temps réel".
-      res.write(chunk);
-    }
-    res.end();
+    const text = await generateOnce(parsed);
+    reply
+      .header("Content-Type", "application/json; charset=utf-8")
+      .send({ text, model: "qwen3:1.7b" });
   } catch (err) {
-    app.log.error(err, "Erreur lors du streaming");
-    if (!res.writableEnded) {
-      res.end();
-    }
+    app.log.error(err, "Erreur génération (JSON)");
+    reply.status(500).send({ error: "Generation failed" });
   }
 });
 
