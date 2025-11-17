@@ -144,7 +144,7 @@ app.options("/api/generate", async (req, reply) => {
 // Elle interroge brièvement l'API locale d'Ollama via pingModel().
 app.get("/api/health", async (_, reply) => {
   const ok = await pingModel();
-  reply.send({ ok, model: "qwen3:4b", ready: ok });
+  reply.send({ ok, model: "qwen3:8b", ready: ok });
 });
 
 // Définition et validation du corps de requête à l'aide de zod.
@@ -227,7 +227,7 @@ app.post("/api/generate", async (req, reply) => {
     const text = await generateOnce(parsed);
     reply
       .header("Content-Type", "application/json; charset=utf-8")
-      .send({ text, model: "qwen3:4b" });
+      .send({ text, model: "qwen3:8b" });
   } catch (err) {
     app.log.error(err, "Erreur génération (JSON)");
     reply.status(500).send({ error: "Generation failed" });
