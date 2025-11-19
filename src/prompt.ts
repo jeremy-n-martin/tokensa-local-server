@@ -27,6 +27,8 @@ export function buildPrompt({ age, niveau, tags }: Input) {
     `Âge: ${age}${niveau ? `, Niveau: ${niveau}` : ""}`,
     "Indices cliniques :",
     toon,
-    "Assure toi de faire une seule et unique phrase par indice clinique."
+    "Assure toi de faire une seule et unique phrase par indice clinique.",
+    "Garde bien le retour à la ligne entre les paragraphes.",
+    "Ecrit des phrases en bon francais"
   ].join("\n");
 }
