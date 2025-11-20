@@ -1,34 +1,28 @@
 type Input = { age: number; niveau?: string; tags: string[] };
-import { encode } from "@toon-format/toon";
 
 export function buildPrompt({ age, niveau, tags }: Input) {
-  const data: Record<string, any> = {
-    context: {
-      task: "Synthèse orthophonique",
-      patientAge: age,
-      ...(niveau ? { niveau } : {})
-    },
-    tags
-  };
-  const toon = encode(data);
+  const indicesList = tags.map((tag) => `- ${tag}`).join("\n");
+  
   return [
     "Tu es orthophoniste.",
-    "Tâche: rédige un rapport d'orthophoniste en français en deux paragraphes séparés par un saut de ligne : un paragraphe sur l'écriture et un paragraphe sur l'écriture.",
+    "Tâche: rédige un rapport d'orthophoniste en français en deux paragraphes séparés par un saut de ligne : un paragraphe sur la lecture et un paragraphe sur l'écriture.",
     "Contraintes de sortie:",
-    "- Réponds en faisant exactement une phrase par indice clinique, de manière factuelle, objective, avec un francais correct.",
-    "- Si aucun indice clinique en lecture, ne rédige pas de paragraphe sur l'écriture.",
-    "- Si aucun indice clinique en écriture, ne rédige pas de paragraphe sur l'écriture.",
-    "- Aucun titre, aucune section, aucune liste, aucune mise en forme Markdown.",
-    "- Pas d'introduction type « Rapport », « Contexte », « Synthèse », ni de signature.",
-    "- N'inclus pas ces consignes ni les données brutes dans la réponse.",
+    "- Réponds en faisant exactement une phrase par puce de la liste des indices ci-dessous.",
+    "- Si la liste contient 6 indices, tu dois écrire exactement 6 phrases.",
+    "- Ne fusionne jamais plusieurs indices dans une même phrase.",
+    "- Classe chaque phrase dans le bon paragraphe (lecture vs écriture) selon le sens de l'indice.",
+    "- Si aucun indice ne concerne la lecture, ne fais pas de paragraphe lecture.",
+    "- Si aucun indice ne concerne l'écriture, ne fais pas de paragraphe écriture.",
+    "- Aucun titre, aucune section, aucune liste à puces dans la réponse, aucune mise en forme Markdown (gras/italique).",
+    "- Pas d'introduction type « Rapport », « Contexte », ni de signature.",
     "- Ton professionnel et bienveillant.",
     "",
     "Données patient:",
     `Âge: ${age}${niveau ? `, Niveau: ${niveau}` : ""}`,
-    "Indices cliniques :",
-    toon,
-    "Assure toi de faire une seule et unique phrase par indice clinique.",
-    "Garde bien le retour à la ligne entre les paragraphes.",
-    "Ecrit des phrases en bon francais"
+    "",
+    "Liste des indices cliniques (1 indice = 1 phrase) :",
+    indicesList,
+    "",
+    "Rappel: Une phrase unique pour chaque indice de la liste ci-dessus. Sépare bien les paragraphes lecture/écriture par un saut de ligne."
   ].join("\n");
 }
