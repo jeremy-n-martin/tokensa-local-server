@@ -20,7 +20,7 @@ export async function pingModel() {
 }
 
 // Décrit la forme d'entrée attendue par les fonctions de génération.
-type Input = { age: number; niveau?: string; tags: string[] };
+type Input = { age: number; tags: string[] };
 
 // Choix du modèle:
 // - On lit la variable d'environnement OLLAMA_MODEL si disponible

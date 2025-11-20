@@ -1,6 +1,6 @@
-type Input = { age: number; niveau?: string; tags: string[] };
+type Input = { age: number; tags: string[] };
 
-export function buildPrompt({ age, niveau, tags }: Input) {
+export function buildPrompt({ age, tags }: Input) {
   const indicesList = tags.map((tag) => `- ${tag}`).join("\n");
   
   return [
@@ -17,8 +17,15 @@ export function buildPrompt({ age, niveau, tags }: Input) {
     "- Pas d'introduction type « Rapport », « Contexte », ni de signature.",
     "- Ton professionnel et bienveillant.",
     "",
+    "Consignes de rédaction (Style) :",
+    "- Évite la répétition robotique de « Le patient présente... ».",
+    "- Transforme le tag en une phrase décrivant l'action ou la difficulté concrète du patient.",
+    "- Utilise des verbes variés : « commet », « confond », « omet », « a du mal à », « on observe », etc.",
+    "- Exemple mauvais qui ne veut rien dire : « Le patient présente des additions. »",
+    "- Exemple bon : « Le patient a tendance à ajouter des phonèmes lors du décodage. » ou « On note des ajouts de sons en lecture. »",
+    "",
     "Données patient:",
-    `Âge: ${age}${niveau ? `, Niveau: ${niveau}` : ""}`,
+    `Âge: ${age}`,
     "",
     "Liste des indices cliniques (1 indice = 1 phrase) :",
     indicesList,
