@@ -1,4 +1,5 @@
 import ollama from "ollama";
+import { z } from "zod";
 import { buildPrompt } from "./prompt.js";
 
 // ------------------------------------------------------------
@@ -22,10 +23,28 @@ export async function pingModel() {
 // Décrit la forme d'entrée attendue par les fonctions de génération.
 type Input = { age: number; tags: string[] };
 
+// Décrit la forme de sortie intermédiaire attendue depuis le LLM (JSON).
+const RapportSchema = z.object({
+  lecture: z.string(),
+  ecriture: z.string()
+});
+type Rapport = z.infer<typeof RapportSchema>;
+
+// Tente d'extraire l'objet JSON principal d'une réponse texte.
+// Permet d'être un minimum robuste si le modèle ajoute du bruit autour.
+function extractJsonObject(text: string): string {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) {
+    throw new Error("Aucun objet JSON détecté dans la réponse du modèle.");
+  }
+  return text.slice(start, end + 1);
+}
+
 // Choix du modèle:
 // - On lit la variable d'environnement OLLAMA_MODEL si disponible
-// - Sinon, on utilise une valeur par défaut "qwen3:4b"
-const MODEL = process.env.OLLAMA_MODEL ?? "qwen3:4b";
+// - Sinon, on utilise une valeur par défaut "qwen3:1.7b"
+const MODEL = process.env.OLLAMA_MODEL ?? "qwen3:1.7b";
 
 export async function generateOnce(input: Input): Promise<string> {
   try {
@@ -51,8 +70,27 @@ export async function generateOnce(input: Input): Promise<string> {
     const data: any = await res.json();
     // L'API d'Ollama renvoie un objet avec une clé 'message' qui porte le 'content'.
     // On nettoie le résultat (trim) pour supprimer espaces/retours superflus en fin.
-    const message: string = (data?.message?.content ?? "").trim();
-    return message;
+    const raw: string = (data?.message?.content ?? "").trim();
+
+    // Étape 1 : extraction de l'objet JSON dans la réponse brute.
+    const jsonText = extractJsonObject(raw);
+
+    // Étape 2 : parsing JSON, puis validation de la structure avec Zod.
+    const parsed = JSON.parse(jsonText);
+    const rapport: Rapport = RapportSchema.parse(parsed);
+
+    // Étape 3 : construction de la sortie finale, avec structure rigide.
+    const prefix = "###RAPPORT_ORTHO###";
+    const lecture = rapport.lecture.trim();
+    const ecriture = rapport.ecriture.trim();
+
+    // Format final imposé :
+    // ###RAPPORT_ORTHO###
+    // [paragraphe lecture]
+    //
+    // [paragraphe écriture]
+    const finalText = [prefix, lecture, "", ecriture].join("\n");
+    return finalText;
   } catch (err: any) {
     const msg = typeof err?.message === "string" ? err.message : "Erreur inconnue";
     // Au lieu de propager l'erreur, on retourne un message explicite.
