@@ -153,6 +153,9 @@ app.get("/api/health", async (_, reply) => {
 // - Éviter des erreurs de logique plus loin dans le pipeline
 const BodySchema = z.object({
   age: z.number().min(2).max(120),
+  // Champs optionnels pour identifier le patient.
+  prenom: z.string().optional(),
+  nom: z.string().optional(),
   tags: z
     .array(
       z.enum([

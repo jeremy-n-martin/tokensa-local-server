@@ -21,7 +21,14 @@ export async function pingModel() {
 }
 
 // Décrit la forme d'entrée attendue par les fonctions de génération.
-type Input = { age: number; tags: string[] };
+// Les champs prenom et nom sont optionnels : s'ils sont fournis, ils pourront
+// être utilisés plus tard pour personnaliser le rapport.
+type Input = {
+  age: number;
+  tags: string[];
+  prenom?: string;
+  nom?: string;
+};
 
 // Décrit la forme de sortie intermédiaire attendue depuis le LLM (JSON).
 const RapportSchema = z.object({

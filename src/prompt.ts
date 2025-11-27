@@ -1,7 +1,14 @@
-type Input = { age: number; tags: string[] };
+type Input = {
+  age: number;
+  tags: string[];
+  prenom?: string;
+  nom?: string;
+};
 
-export function buildPrompt({ age, tags }: Input) {
+export function buildPrompt({ age, tags, prenom, nom }: Input) {
   const indicesList = tags.map((tag) => `- ${tag}`).join("\n");
+  // Préparation d'un nom complet éventuellement utilisable dans le prompt.
+  const fullName = [prenom, nom].filter(Boolean).join(" ");
 
   return [
     "Tu es orthophoniste.",
@@ -20,12 +27,14 @@ export function buildPrompt({ age, tags }: Input) {
     "",
     "CONTRAINTES SUR LE CONTENU (CHAMP lecture) :",
     '- Le champ "lecture" contient un unique paragraphe (aucun saut de ligne interne).',
-    '- Ce paragraphe commence par une tournure du type « Lors des épreuves de lecture, le patient ... » (ou formulation strictement équivalente).',
+    "- La première phrase du paragraphe commence par une tournure du type « Lors des épreuves de lecture, le patient ... » (ou formulation strictement équivalente).",
+    "- Ne répète pas ensuite cette tournure exacte dans les phrases suivantes : utilise des formulations variées pour éviter la redondance.",
     "- Les phrases qui décrivent des indices liés à la lecture sont toutes dans ce paragraphe.",
     "",
     "CONTRAINTES SUR LE CONTENU (CHAMP ecriture) :",
     '- Le champ "ecriture" contient un unique paragraphe (aucun saut de ligne interne).',
-    '- Ce paragraphe commence par une tournure du type « En production écrite, le patient ... » (ou formulation strictement équivalente).',
+    "- La première phrase du paragraphe commence par une tournure du type « En production écrite, le patient ... » (ou formulation strictement équivalente).",
+    "- Ne répète pas ensuite cette tournure exacte dans les phrases suivantes : utilise des formulations variées pour éviter la redondance.",
     "- Les phrases qui décrivent des indices liés à l'écriture sont toutes dans ce paragraphe.",
     "",
     "CONSIGNES DE RÉDACTION (STYLE) :",
@@ -34,6 +43,7 @@ export function buildPrompt({ age, tags }: Input) {
     "- Reformule les intitulés bruts des tags en français naturel : ne copie pas mot à mot les libellés, mais rédige des phrases grammaticalement correctes et idiomatiques.",
     "- Utilise un style proche d'un compte-rendu : phrases longues mais claires, avec des connecteurs logiques (« de plus », « en outre », « ainsi que », « également », « par ailleurs », « on observe également », « suggérant », « témoignant de », etc.).",
     "- Varie les verbes : « présente », « on observe », « on note », « révèle », « témoignant de », « suggérant », etc.",
+    "- Évite les répétitions inutiles d'expressions complètes (par exemple ne répète pas plusieurs fois « lors des épreuves de lecture » ou « en production écrite ») : assure une progression discursive fluide.",
     "- Le texte doit être rédigé dans un français correct, sans calques maladroits des intitulés (par exemple « inversions phonologiques » plutôt que « phonologiques inversions », « difficultés au plan graphomoteur » plutôt que « troubles graphomotricités »).",
     "- Ton professionnel, clinique et bienveillant.",
     "- Aucun titre, aucune section, aucune liste à puces, aucune mise en forme Markdown.",
