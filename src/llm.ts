@@ -32,9 +32,11 @@ type Input = {
 };
 
 // Décrit la forme de sortie intermédiaire attendue depuis le LLM (JSON).
+// On tolère que le modèle oublie un des champs et on le remplace alors par
+// une chaîne vide, pour éviter de casser tout le pipeline côté utilisateur.
 const RapportSchema = z.object({
-  lecture: z.string(),
-  ecriture: z.string()
+  lecture: z.string().optional().default(""),
+  ecriture: z.string().optional().default("")
 });
 type Rapport = z.infer<typeof RapportSchema>;
 
