@@ -156,6 +156,8 @@ const BodySchema = z.object({
   // Champs optionnels pour identifier le patient.
   prenom: z.string().optional(),
   nom: z.string().optional(),
+  // Sexe optionnel : true = homme, false = femme, undefined = non précisé.
+  homme: z.boolean().optional(),
   tags: z
     .array(
       z.enum([

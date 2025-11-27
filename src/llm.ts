@@ -21,13 +21,14 @@ export async function pingModel() {
 }
 
 // Décrit la forme d'entrée attendue par les fonctions de génération.
-// Les champs prenom et nom sont optionnels : s'ils sont fournis, ils pourront
-// être utilisés plus tard pour personnaliser le rapport.
+// Les champs prenom, nom et homme sont optionnels : s'ils sont fournis, ils
+// pourront être utilisés plus tard pour personnaliser le rapport.
 type Input = {
   age: number;
   tags: string[];
   prenom?: string;
   nom?: string;
+  homme?: boolean;
 };
 
 // Décrit la forme de sortie intermédiaire attendue depuis le LLM (JSON).
@@ -36,6 +37,35 @@ const RapportSchema = z.object({
   ecriture: z.string()
 });
 type Rapport = z.infer<typeof RapportSchema>;
+
+// Construit un libellé adapté pour désigner le patient, en fonction de l'âge,
+// du prénom, du nom et du sexe, selon les règles métier fournies.
+function buildPatientLabel(input: Input): string {
+  const prenom = input.prenom?.trim();
+  const nom = input.nom?.trim();
+
+  // 1) Moins de 18 ans et prénom fourni -> on utilise le prénom.
+  if (input.age < 18 && prenom) {
+    return prenom;
+  }
+
+  // 2) Plus de 18 ans, nom + sexe fournis -> M. / Mme + nom.
+  if (input.age > 18 && nom && typeof input.homme === "boolean") {
+    const civilite = input.homme ? "M." : "Mme";
+    return `${civilite} ${nom}`;
+  }
+
+  // 3) Sinon, on reste sur « le patient ».
+  return "le patient";
+}
+
+// Remplace uniquement la première occurrence de « le patient » dans un
+// paragraphe par le libellé calculé, en laissant le reste du texte intact.
+function personalizeParagraph(paragraph: string, label: string): string {
+  if (!paragraph) return paragraph;
+  if (label === "le patient") return paragraph;
+  return paragraph.replace("le patient", label);
+}
 
 // Tente d'extraire l'objet JSON principal d'une réponse texte.
 // Permet d'être un minimum robuste si le modèle ajoute du bruit autour.
@@ -91,14 +121,11 @@ export async function generateOnce(input: Input): Promise<string> {
     const parsed = JSON.parse(jsonText);
     const rapport: Rapport = RapportSchema.parse(parsed);
 
-    // Étape 3 : construction de la sortie finale, avec structure rigide.
-    const lecture = rapport.lecture.trim();
-    const ecriture = rapport.ecriture.trim();
+    // Étape 3 : personnalisation éventuelle de la mention « le patient ».
+    const label = buildPatientLabel(input);
+    const lecture = personalizeParagraph(rapport.lecture.trim(), label);
+    const ecriture = personalizeParagraph(rapport.ecriture.trim(), label);
 
-    // Format final imposé :
-    // ###RAPPORT_ORTHO###
-    // [paragraphe lecture]
-    //
     // [paragraphe écriture]
     const finalText = [lecture, "", ecriture].join("\n");
     return finalText;
