@@ -43,6 +43,7 @@ export function buildPrompt({ age, tags, prenom, nom, homme }: Input) {
     "CONSIGNES DE RÉDACTION (STYLE) :",
     '- Utilise l’expression « le patient » uniquement dans la première phrase de chaque paragraphe, puis varie ensuite les formulations (pronoms, tournures impersonnelles, reformulations).',
     "- Transforme chaque tag en une phrase complète, descriptive et clinique décrivant l'action, la stratégie ou la difficulté concrète du patient.",
+    "- Ne crée pas de nouveaux troubles ou mécanismes cliniques qui ne figurent pas dans la liste des indices : appuie-toi exclusivement sur les difficultés explicitement présentes dans les tags (pas d'hypothèses supplémentaires, pas de notions de « supports visuels » ou d'« images en mots » si elles ne sont pas indiquées).",
     "- Reformule les intitulés bruts des tags en français naturel : ne copie pas mot à mot les libellés, mais rédige des phrases grammaticalement correctes et idiomatiques.",
     "- Utilise un style proche d'un compte-rendu : phrases longues mais claires, avec des connecteurs logiques (« de plus », « en outre », « ainsi que », « également », « par ailleurs », « on observe également », « suggérant », « témoignant de », etc.).",
     "- Varie les verbes : « présente », « on observe », « on note », « révèle », « témoignant de », « suggérant », etc.",
