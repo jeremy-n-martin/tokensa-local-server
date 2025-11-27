@@ -101,9 +101,11 @@ export async function generateOnce(input: Input): Promise<string> {
         messages: [{ role: "user", content: user }],
         stream: false,
         // On réduit légèrement la température pour favoriser des formulations
-        // plus stables et moins « fantaisistes » en français.
+        // plus stables et on applique une pénalité de répétition pour limiter
+        // la réutilisation mot à mot des mêmes segments.
         options: {
-          temperature: 0.2
+          temperature: 0.2,
+          repeat_penalty: 1.3
         }
       })
     });
@@ -123,10 +125,30 @@ export async function generateOnce(input: Input): Promise<string> {
     const parsed = JSON.parse(jsonText);
     const rapport: Rapport = RapportSchema.parse(parsed);
 
+    // Validation métier minimale : si des tags d'écriture sont présents,
+    // on exige que le paragraphe "ecriture" ne soit pas vide ; idem pour
+    // la lecture. Sinon, on considère la réponse du modèle comme invalide.
+    const hasLectureTags = input.tags.some((t) => t.startsWith("Lecture"));
+    const hasEcritureTags = input.tags.some((t) => t.startsWith("Écriture"));
+    if ((hasLectureTags && !rapport.lecture.trim()) || (hasEcritureTags && !rapport.ecriture.trim())) {
+      throw new Error(
+        "Un des paragraphes attendus (lecture/écriture) est manquant ou vide dans la réponse du modèle."
+      );
+    }
+
     // Étape 3 : personnalisation éventuelle de la mention « le patient ».
     const label = buildPatientLabel(input);
-    const lecture = personalizeParagraph(rapport.lecture.trim(), label);
-    const ecriture = personalizeParagraph(rapport.ecriture.trim(), label);
+
+    // Si aucun trouble n'est coché pour un des domaines, on remplace
+    // entièrement le paragraphe correspondant par une phrase neutre,
+    // sans dépendre du LLM.
+    const lecture = hasLectureTags
+      ? personalizeParagraph(rapport.lecture.trim(), label)
+      : "Aucun trouble pour la lecture n'a été observé.";
+
+    const ecriture = hasEcritureTags
+      ? personalizeParagraph(rapport.ecriture.trim(), label)
+      : "Aucun trouble pour l'écriture n'a été observé.";
 
     // [paragraphe écriture]
     const finalText = [lecture, "", ecriture].join("\n");
