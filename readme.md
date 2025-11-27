@@ -9,7 +9,7 @@ Serveur d'inférence local pour [tokensa.com](https://tokensa.com).
 - **Ollama** ([https://ollama.com](https://ollama.com))
 - Modèle téléchargé :
   ```bash
-  ollama run qwen3:1.7b
+  ollama run qwen3:8b
   ```
 
 ## Lancement

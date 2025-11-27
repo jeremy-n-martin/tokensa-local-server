@@ -69,6 +69,40 @@ function personalizeParagraph(paragraph: string, label: string): string {
   return paragraph.replace("le patient", label);
 }
 
+// Corrige quelques incohérences typiques entre les deux paragraphes en
+// post-traitement, sans redemander une génération au LLM.
+// - Le paragraphe lecture ne doit jamais contenir « En production écrite ».
+// - Le paragraphe écriture ne doit jamais contenir « Lors des épreuves de lecture ».
+function sanitizeParagraphs(lecture: string, ecriture: string): {
+  lecture: string;
+  ecriture: string;
+} {
+  let fixedLecture = lecture;
+  let fixedEcriture = ecriture;
+
+  if (fixedLecture.includes("En production écrite")) {
+    fixedLecture = fixedLecture.replace(
+      /En production écrite/g,
+      "Lors des épreuves de lecture"
+    );
+  }
+  if (fixedLecture.includes("En écriture")) {
+    fixedLecture = fixedLecture.replace(
+      /En écriture/g,
+      "Lors des épreuves de lecture"
+    );
+  }
+
+  if (fixedEcriture.includes("Lors des épreuves de lecture")) {
+    fixedEcriture = fixedEcriture.replace(
+      /Lors des épreuves de lecture/g,
+      "En production écrite"
+    );
+  }
+
+  return { lecture: fixedLecture, ecriture: fixedEcriture };
+}
+
 // Tente d'extraire l'objet JSON principal d'une réponse texte.
 // Permet d'être un minimum robuste si le modèle ajoute du bruit autour.
 function extractJsonObject(text: string): string {
@@ -82,8 +116,8 @@ function extractJsonObject(text: string): string {
 
 // Choix du modèle:
 // - On lit la variable d'environnement OLLAMA_MODEL si disponible
-// - Sinon, on utilise une valeur par défaut "qwen3:1.7b"
-const MODEL = process.env.OLLAMA_MODEL ?? "qwen3:1.7b";
+// - Sinon, on utilise une valeur par défaut "qwen3:8b"
+const MODEL = process.env.OLLAMA_MODEL ?? "qwen3:8b";
 
 export async function generateOnce(input: Input): Promise<string> {
   try {
@@ -159,8 +193,12 @@ export async function generateOnce(input: Input): Promise<string> {
           : "Le paragraphe d'écriture n'a pas pu être généré automatiquement et devra être complété manuellement.";
     }
 
+    // Post-sanitisation minimale pour corriger des formules inversées
+    // entre les deux domaines (lecture vs écriture).
+    const sanitized = sanitizeParagraphs(lecture, ecriture);
+
     // [paragraphe écriture]
-    const finalText = [lecture, "", ecriture].join("\n");
+    const finalText = [sanitized.lecture, "", sanitized.ecriture].join("\n");
     return finalText;
   } catch (err: any) {
     const msg = typeof err?.message === "string" ? err.message : "Erreur inconnue";
