@@ -125,30 +125,39 @@ export async function generateOnce(input: Input): Promise<string> {
     const parsed = JSON.parse(jsonText);
     const rapport: Rapport = RapportSchema.parse(parsed);
 
-    // Validation métier minimale : si des tags d'écriture sont présents,
-    // on exige que le paragraphe "ecriture" ne soit pas vide ; idem pour
-    // la lecture. Sinon, on considère la réponse du modèle comme invalide.
+    // Présence ou non de troubles dans chaque domaine.
     const hasLectureTags = input.tags.some((t) => t.startsWith("Lecture"));
     const hasEcritureTags = input.tags.some((t) => t.startsWith("Écriture"));
-    if ((hasLectureTags && !rapport.lecture.trim()) || (hasEcritureTags && !rapport.ecriture.trim())) {
-      throw new Error(
-        "Un des paragraphes attendus (lecture/écriture) est manquant ou vide dans la réponse du modèle."
-      );
-    }
 
     // Étape 3 : personnalisation éventuelle de la mention « le patient ».
     const label = buildPatientLabel(input);
 
     // Si aucun trouble n'est coché pour un des domaines, on remplace
     // entièrement le paragraphe correspondant par une phrase neutre,
-    // sans dépendre du LLM.
-    const lecture = hasLectureTags
-      ? personalizeParagraph(rapport.lecture.trim(), label)
-      : "Aucun trouble pour la lecture n'a été observé.";
+    // sans dépendre du LLM. Si des troubles sont cochés mais que le modèle
+    // renvoie un paragraphe vide, on fournit une phrase explicite indiquant
+    // l'absence de texte généré, plutôt que de renvoyer une erreur.
+    let lecture: string;
+    if (!hasLectureTags) {
+      lecture = "Aucun trouble pour la lecture n'a été observé.";
+    } else {
+      const rawLecture = rapport.lecture.trim();
+      lecture =
+        rawLecture.length > 0
+          ? personalizeParagraph(rawLecture, label)
+          : "Le paragraphe de lecture n'a pas pu être généré automatiquement et devra être complété manuellement.";
+    }
 
-    const ecriture = hasEcritureTags
-      ? personalizeParagraph(rapport.ecriture.trim(), label)
-      : "Aucun trouble pour l'écriture n'a été observé.";
+    let ecriture: string;
+    if (!hasEcritureTags) {
+      ecriture = "Aucun trouble pour l'écriture n'a été observé.";
+    } else {
+      const rawEcriture = rapport.ecriture.trim();
+      ecriture =
+        rawEcriture.length > 0
+          ? personalizeParagraph(rawEcriture, label)
+          : "Le paragraphe d'écriture n'a pas pu être généré automatiquement et devra être complété manuellement.";
+    }
 
     // [paragraphe écriture]
     const finalText = [lecture, "", ecriture].join("\n");
