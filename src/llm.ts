@@ -60,7 +60,12 @@ export async function generateOnce(input: Input): Promise<string> {
       body: JSON.stringify({
         model: MODEL,
         messages: [{ role: "user", content: user }],
-        stream: false
+        stream: false,
+        // On réduit légèrement la température pour favoriser des formulations
+        // plus stables et moins « fantaisistes » en français.
+        options: {
+          temperature: 0.2
+        }
       })
     });
     if (!res.ok) {
@@ -80,7 +85,6 @@ export async function generateOnce(input: Input): Promise<string> {
     const rapport: Rapport = RapportSchema.parse(parsed);
 
     // Étape 3 : construction de la sortie finale, avec structure rigide.
-    const prefix = "###RAPPORT_ORTHO###";
     const lecture = rapport.lecture.trim();
     const ecriture = rapport.ecriture.trim();
 
@@ -89,7 +93,7 @@ export async function generateOnce(input: Input): Promise<string> {
     // [paragraphe lecture]
     //
     // [paragraphe écriture]
-    const finalText = [prefix, lecture, "", ecriture].join("\n");
+    const finalText = [lecture, "", ecriture].join("\n");
     return finalText;
   } catch (err: any) {
     const msg = typeof err?.message === "string" ? err.message : "Erreur inconnue";
